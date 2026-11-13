@@ -4,7 +4,8 @@ public record Article(
        Long id,
        String title,
        String url,
-       Long time
+       Long time,
+       String source
 
 ) {
 }
