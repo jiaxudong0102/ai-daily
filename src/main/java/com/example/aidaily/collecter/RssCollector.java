@@ -14,7 +14,7 @@ import java.util.List;
 
 @Component
 public class RssCollector {
-    private static final String feedUrl = "https://news.ycombinator.com/rss";
+    private static final String feedUrl = "https://spring.io/blog.atom";
     private final RestClient restClientBuilder;
 
     public RssCollector(RestClient.Builder restClientBuilder) {

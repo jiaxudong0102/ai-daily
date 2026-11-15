@@ -34,13 +34,23 @@ public class HackerNewsCollector {
                 .filter(Objects::nonNull)
                 .toList();
     }
-    private Article fetchArticle(Long id){
+    private Article fetchArticle(Long id1){
         try {
-            return restClient.get().uri(ITEM, id).retrieve().body(Article.class);
+            Article article1=restClient.get().uri(ITEM, id1).retrieve().body(Article.class);
+            if(article1==null){
+                return null;
+            }
+            return new Article(
+                    article1.id(),
+                    article1.title(),
+                    article1.url(),
+                    article1.time(),
+                    "hn"
+            );
         }
         catch (RestClientException exception) {
                 System.err.printf(
-                        "文章采集失败，id=%d,原因=%s\n",id,exception.getMessage()
+                        "文章采集失败，id=%d,原因=%s\n",id1,exception.getMessage()
                 );
                 return null;
         }
