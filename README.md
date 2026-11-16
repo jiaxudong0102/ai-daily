@@ -18,7 +18,7 @@ AI Daily 是一个基于 Spring Boot 开发的个性化 AI 资讯日报系统。
 - 定时任务自动执行
 - Docker部署
 
-## 当前进度（第三天）
+## 当前进度（第四天）
 
 已完成：
 
@@ -35,12 +35,16 @@ AI Daily 是一个基于 Spring Boot 开发的个性化 AI 资讯日报系统。
 - 将清洗后的多来源资讯保存到 `data/articles.json`
 - Hacker News 单篇资讯请求异常处理
 - 编写三个清洗逻辑单元测试：无效数据过滤、规范化与去重、空列表处理
+- 接入 MySQL 和 Spring Data JPA，使用 `ArticleEntity` 映射 `articles` 表
+- 将清洗后的文章保存到数据库，并按 URL 检查已有记录
+- 通过 Repository 查询最近入库的 20 篇文章
+- 从配置文件读取 Hacker News 和 RSS 的采集数量
 
 待完成：
 
 - GitHub热门项目采集
 - ArXiv资讯采集
-- 数据库存储
+- 在实际数据库中验收唯一索引、重启保留与固定 URL 重复采集
 - 大模型摘要
 - 推荐排序
 - 日报页面
@@ -59,11 +63,11 @@ AI Daily 是一个基于 Spring Boot 开发的个性化 AI 资讯日报系统。
 - Hacker News API
 - Rome 2.1.0（RSS/Atom 解析）
 - JUnit Jupiter（单元测试）
+- MySQL 8.0
+- Spring Data JPA
 
 后续计划引入：
 
-- MySQL
-- Spring Data JPA 或 MyBatis-Plus
 - Spring AI
 - Thymeleaf
 - Docker
@@ -78,12 +82,17 @@ src/main/java/com/example/aidaily/
 │  └─ RssCollector.java
 ├─ config/
 │  └─ RestClientConfig.java
+├─ entity/
+│  └─ ArticleEntity.java
 ├─ model/
 │  └─ Article.java
+├─ repository/
+│  └─ ArticleRepository.java
 ├─ runner/
 │  └─ CollectionRunner.java
 └─ service/
-   └─ ArticleService.java
+   ├─ ArticleService.java
+   └─ ArticlePersistenceService.java
 
 src/test/java/com/example/aidaily/
 ├─ AiDailyApplicationTests.java
@@ -94,24 +103,29 @@ src/test/java/com/example/aidaily/
 ## 当前处理流程
 
 ```text
-Hacker News + RSS → 合并 → 过滤无效文章 → 规范化字段 → 按 URL 去重 → 保存 JSON
+Hacker News + RSS → 合并 → 清洗并按 URL 去重 → 查询数据库已有 URL → 保存新文章到 MySQL → 保存本次采集 JSON
 ```
 
 - 采集器负责获取文章并补充来源信息。
 - `ArticleService` 负责过滤、规范化和去重。
-- `CollectionRunner` 负责组织流程并写入文件。
+- `CollectionRunner` 负责组织流程、入库和写入文件。
+- `ArticlePersistenceService` 将采集模型转换为 JPA 实体，`ArticleRepository` 负责保存和查询。
 
 当前去重依据是去除两端空白后的 URL 完全相同，不合并查询参数或路径不同的链接。两个来源出现相同 URL 时，保留先加入列表的文章；当前 Hacker News 在前，RSS 在后。
 
 ## 运行项目
 
-需要 Java 17，并能访问 Maven 依赖仓库和资讯接口。在项目根目录的 PowerShell 中运行：
+需要 Java 17、MySQL 8.0，并能访问 Maven 依赖仓库和资讯接口。先创建 `ai_daily` 数据库。新数据库可执行 `sql/schema.sql`；如果 `articles` 表已由 JPA 创建，`CREATE TABLE IF NOT EXISTS` 不会补上唯一索引，请先检查重复 URL，再按 `sql/add_url_hash_unique.sql` 中的说明执行迁移。
+
+在 IDEA 运行配置中设置 `DB_USERNAME` 和 `DB_PASSWORD`，或在当前 PowerShell 会话设置环境变量；真实密码不要写入项目文件。在项目根目录运行：
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-也可以在 IDE 中运行 `AiDailyApplication`。应用启动后执行一次采集，最多请求前 10 条 Hacker News 热门文章和前 5 条 RSS 文章，清洗后覆盖保存到工作目录下的 `data/articles.json`。最终数量取决于源数据、请求结果和清洗情况，不保证为 15 条。
+也可以在 IDE 中运行 `AiDailyApplication`。应用启动后执行一次采集，采集上限由 `app.collect.hn-limit` 和 `app.collect.rss-limit` 控制，默认分别为 10 和 5。清洗后保存新文章到数据库，并覆盖工作目录下的 `data/articles.json`；最终数量取决于源数据、请求结果和清洗情况。启动日志会打印最近入库的 20 篇文章。
+
+数据库去重以清洗后的 URL 为依据。`existsByUrl` 处理通常的重复采集；`uk_articles_url_hash` 唯一索引提供数据库约束。请用 `SHOW INDEX FROM articles WHERE Key_name = 'uk_articles_url_hash';` 确认实际数据库已建索引。
 
 ## 运行清洗单元测试
 
