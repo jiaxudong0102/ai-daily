@@ -4,6 +4,8 @@ import com.example.aidaily.entity.ArticleEntity;
 import com.example.aidaily.model.Article;
 import org.springframework.stereotype.Service;
 
+import static com.example.aidaily.common.AiStatus.PENDING;
+
 @Service
 public class ArticlePersistenceService {
     public ArticleEntity savedEntity(Article article) {
@@ -13,6 +15,9 @@ public class ArticlePersistenceService {
         articleEntity.setUrl(article.url());
         articleEntity.setPublishedAt(article.time());
         articleEntity.setSource(article.source());
+        articleEntity.setText(article.text());
+        articleEntity.setAiStatus( PENDING);
+        articleEntity.setRetryCount(0L);
         return articleEntity;
     }
 }

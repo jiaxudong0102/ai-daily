@@ -32,7 +32,8 @@ public class ArticleService {
                 article.title().strip(),
                 article.url().strip(),
                 article.time(),
-                article.source()
+                article.source(),
+                article.text()
         );
     }
 

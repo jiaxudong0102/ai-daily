@@ -5,7 +5,8 @@ public record Article(
        String title,
        String url,
        Long time,
-       String source
+       String source,
+       String text
 
 ) {
 }

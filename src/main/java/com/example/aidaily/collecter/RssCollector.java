@@ -1,6 +1,7 @@
 package com.example.aidaily.collecter;
 
 import com.example.aidaily.model.Article;
+import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.FeedException;
@@ -42,13 +43,24 @@ public class RssCollector {
         String url=entry.getLink();
 
         Long time=entry.getPublishedDate()==null?null:entry.getPublishedDate().toInstant().getEpochSecond();
+       List<SyndContent> contents = entry.getContents();
+
+       String html;
+       if (contents != null && !contents.isEmpty()) {
+           html = contents.get(0).getValue();
+       } else if (entry.getDescription() != null) {
+           html = entry.getDescription().getValue();
+       } else {
+           html = null;
+       }
 
        return new Article(
                Integer.toUnsignedLong(url.hashCode()),
                entry.getTitle(),
                url,
                time,
-               "rss"
+               "rss",
+               html
        );
 
    }

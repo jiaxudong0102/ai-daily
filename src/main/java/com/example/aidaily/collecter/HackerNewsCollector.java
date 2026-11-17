@@ -24,7 +24,13 @@ public class HackerNewsCollector {
      * 按数量推荐
      */
     public List<Article>fetch(int limit) {
-        Long[] ids=restClient.get().uri(TOP_STORIES).retrieve().body(Long[].class);
+        Long[] ids;
+        try {
+            ids = restClient.get().uri(TOP_STORIES).retrieve().body(Long[].class);
+        } catch (RestClientException exception) {
+            System.err.printf("HN 热门列表采集失败，原因=%s%n", exception.getMessage());
+            return List.of();
+        }
         if(ids==null){
             return List.of();
         }
@@ -45,7 +51,8 @@ public class HackerNewsCollector {
                     article1.title(),
                     article1.url(),
                     article1.time(),
-                    "hn"
+                    "hn",
+                    article1.text()
             );
         }
         catch (RestClientException exception) {
