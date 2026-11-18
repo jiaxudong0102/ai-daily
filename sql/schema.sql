@@ -10,6 +10,13 @@ CREATE TABLE IF NOT EXISTS articles (
     source_id BIGINT DEFAULT NULL,
     title VARCHAR(255) DEFAULT NULL,
     url VARCHAR(2048) NOT NULL,
+    text TEXT DEFAULT NULL,
+    summary TEXT DEFAULT NULL,
+    category VARCHAR(255) DEFAULT NULL,
+    ai_status VARCHAR(255) DEFAULT NULL,
+    retry_count BIGINT DEFAULT NULL,
+    last_error VARCHAR(255) DEFAULT NULL,
+    interest_score BIGINT DEFAULT NULL,
     url_hash BINARY(32)
         GENERATED ALWAYS AS (UNHEX(SHA2(url, 256))) STORED,
     PRIMARY KEY (id),

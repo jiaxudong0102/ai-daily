@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="AI Daily 技术资讯日报">
+    <title th:text="|${date} · AI Daily|">AI Daily · 技术日报</title>
+    <link rel="stylesheet" href="/css/daily.css">
+</head>
+<body>
+<header class="site-header">
+    <div class="site-header__inner">
+        <a class="brand" href="/daily" aria-label="AI Daily 今日日报">
+            <span class="brand__mark" aria-hidden="true">A</span>
+            <span>AI Daily</span>
+        </a>
+        <span class="site-header__label">每日技术精选</span>
+    </div>
+</header>
+
+<main class="page-shell">
+    <section class="hero" aria-labelledby="page-title">
+        <div class="hero__intro">
+            <span class="eyebrow">TECHNOLOGY BRIEFING</span>
+            <h1 id="page-title">今日值得一读的技术资讯</h1>
+            <p class="hero__description">汇集 Hacker News 与 Spring 博客，按兴趣整理中文简讯。</p>
+        </div>
+        <form class="date-picker" action="/daily" method="get">
+            <label for="date">选择日期</label>
+            <div class="date-picker__controls">
+                <input id="date" name="date" type="date" th:value="${date}" required>
+                <button type="submit">查看日报 <span aria-hidden="true">→</span></button>
+            </div>
+        </form>
+    </section>
+
+    <section class="edition-bar" aria-label="日报信息">
+        <div class="edition-bar__date">
+            <span class="edition-bar__caption">本期日期</span>
+            <time th:datetime="${date}" th:text="${date}">2026-11-18</time>
+        </div>
+        <div class="edition-bar__count">
+            <strong th:text="${#lists.size(articles)}">0</strong>
+            <span>篇精选文章</span>
+        </div>
+    </section>
+
+    <section class="stories" aria-labelledby="stories-title">
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow eyebrow--soft">TODAY'S STORIES</span>
+                <h2 id="stories-title">文章精选</h2>
+            </div>
+            <span class="section-heading__note">按兴趣分数排列</span>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(articles)}">
+            <span class="empty-state__icon" aria-hidden="true">✦</span>
+            <h3>这一天还没有已处理的文章</h3>
+            <p>可以选择其他日期查看，或稍后再来。</p>
+        </div>
+
+        <div class="story-list" th:unless="${#lists.isEmpty(articles)}">
+            <article class="story" th:each="article, item : ${articles}">
+                <div class="story__number" aria-hidden="true"
+                     th:text="${#numbers.formatInteger(item.index + 1, 2)}">01</div>
+                <div class="story__body">
+                    <div class="story__meta">
+                        <span class="story__source" th:text="${article.source}">rss</span>
+                        <span class="story__separator" aria-hidden="true">·</span>
+                        <span class="story__category" th:text="${article.category}">后端</span>
+                    </div>
+                    <h3 class="story__title">
+                        <a th:href="${article.url}" th:text="${article.title}"
+                           target="_blank" rel="noopener noreferrer">文章标题</a>
+                    </h3>
+                    <p class="story__summary" th:text="${article.summary}">这篇文章的中文简讯。</p>
+                    <a class="story__read-link" th:href="${article.url}"
+                       target="_blank" rel="noopener noreferrer">
+                        阅读原文 <span aria-hidden="true">↗</span>
+                    </a>
+                </div>
+                <div class="story__score" aria-label="兴趣分数">
+                    <strong th:text="${article.interestScore != null ? article.interestScore : 0}">0</strong>
+                    <span>兴趣分</span>
+                </div>
+            </article>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="site-footer__inner">
+        <span>AI Daily</span>
+        <span>阅读原文以了解完整内容</span>
+    </div>
+</footer>
+</body>
+</html>

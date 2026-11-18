@@ -59,4 +59,12 @@ class ArticleServiceTest {
     void shouldHandleEmptyList() {
         assertEquals(List.of(), articleService.clean(List.of()));
     }
+
+    @Test
+    void shouldExtractPlainTextFromHtml() {
+        Article article = new Article(6L, "RSS 文章", "https://example.com/rss",
+                400L, "rss", "<p>Spring&nbsp;<strong>更新</strong></p><script>ignored()</script>");
+
+        assertEquals("Spring 更新", articleService.clean(List.of(article)).get(0).text());
+    }
 }

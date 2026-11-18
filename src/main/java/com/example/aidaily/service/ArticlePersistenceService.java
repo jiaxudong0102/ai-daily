@@ -4,6 +4,9 @@ import com.example.aidaily.entity.ArticleEntity;
 import com.example.aidaily.model.Article;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+
 import static com.example.aidaily.common.AiStatus.PENDING;
 
 @Service
@@ -18,6 +21,7 @@ public class ArticlePersistenceService {
         articleEntity.setText(article.text());
         articleEntity.setAiStatus( PENDING);
         articleEntity.setRetryCount(0L);
+        articleEntity.setCollectDate(LocalDate.now(ZoneId.of("Asia/Shanghai")));
         return articleEntity;
     }
 }

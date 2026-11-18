@@ -4,6 +4,8 @@ import com.example.aidaily.common.AiStatus;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name="articles")
 public class ArticleEntity {
@@ -45,6 +47,17 @@ public class ArticleEntity {
     private Long retryCount;
     private String lastError;
     private Long interestScore;
+
+    public LocalDate getCollectDate() {
+        return collectDate;
+    }
+
+    public void setCollectDate(LocalDate collectDate) {
+        this.collectDate = collectDate;
+    }
+
+    private LocalDate collectDate;
+
 
     public String getSummary() {
         return summary;

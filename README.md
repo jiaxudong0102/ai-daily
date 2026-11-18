@@ -18,7 +18,7 @@ AI Daily 是一个基于 Spring Boot 开发的个性化 AI 资讯日报系统。
 - 定时任务自动执行
 - Docker部署
 
-## 当前进度（第四天）
+## 当前进度（第五天，开发中）
 
 已完成：
 
@@ -39,14 +39,22 @@ AI Daily 是一个基于 Spring Boot 开发的个性化 AI 资讯日报系统。
 - 将清洗后的文章保存到数据库，并按 URL 检查已有记录
 - 通过 Repository 查询最近入库的 20 篇文章
 - 从配置文件读取 Hacker News 和 RSS 的采集数量
+- 为文章模型和数据库实体增加 `text`，RSS 从 feed 内容或描述取文本，HN 读取 API 的 `text`
+- 为数据库实体增加 AI 摘要、分类、状态、重试次数、错误信息和兴趣分数字段
+- 编写 DeepSeek 请求客户端、响应对象、AI 处理 Service 和启动 Runner 的初版
+- 清洗测试已适配新增的 `text` 字段，验证正文在清洗和去重后保留
 
 待完成：
 
+- 修复 `AiProcessingService.setArticleEntity` 中的递归调用：当前方法内调用 `saveAll(setArticleEntity(articleEntities))`，AI 批处理不可正常完成
+- 改为逐篇处理、逐篇保存；一篇失败时记录 `FAILED`、重试次数和错误原因，并继续处理后续文章
+- 扩展候选查询，纳入未超重试上限的 `FAILED` 文章，排除没有正文的文章
+- 清理 RSS 正文中的 HTML，校验 DeepSeek 的空响应、摘要和分类
+- 为 AI Runner 加默认关闭的启用开关；先验证一篇，再完成至少 10 篇处理与重复运行验收
+- 实现配置化兴趣评分和排序查询
+- 为现有表核对新增列，更新数据库脚本、测试和运行文档
 - GitHub热门项目采集
 - ArXiv资讯采集
-- 在实际数据库中验收唯一索引、重启保留与固定 URL 重复采集
-- 大模型摘要
-- 推荐排序
 - 日报页面
 - 飞书推送
 - 定时任务
@@ -65,10 +73,10 @@ AI Daily 是一个基于 Spring Boot 开发的个性化 AI 资讯日报系统。
 - JUnit Jupiter（单元测试）
 - MySQL 8.0
 - Spring Data JPA
+- DeepSeek Chat Completions API（接入代码开发中）
 
 后续计划引入：
 
-- Spring AI
 - Thymeleaf
 - Docker
 
@@ -82,17 +90,27 @@ src/main/java/com/example/aidaily/
 │  └─ RssCollector.java
 ├─ config/
 │  └─ RestClientConfig.java
+├─ client/
+│  └─ DeepSeekClient.java
+├─ common/
+│  └─ AiStatus.java
 ├─ entity/
 │  └─ ArticleEntity.java
 ├─ model/
 │  └─ Article.java
 ├─ repository/
 │  └─ ArticleRepository.java
+├─ response/
+│  └─ ChatResponse.java
+├─ result/
+│  └─ aiResult.java
 ├─ runner/
-│  └─ CollectionRunner.java
+│  ├─ CollectionRunner.java
+│  └─ AiProcessingRunner.java
 └─ service/
    ├─ ArticleService.java
-   └─ ArticlePersistenceService.java
+   ├─ ArticlePersistenceService.java
+   └─ AiProcessingService.java
 
 src/test/java/com/example/aidaily/
 ├─ AiDailyApplicationTests.java
@@ -104,6 +122,8 @@ src/test/java/com/example/aidaily/
 
 ```text
 Hacker News + RSS → 合并 → 清洗并按 URL 去重 → 查询数据库已有 URL → 保存新文章到 MySQL → 保存本次采集 JSON
+
+AI 处理代码正在开发：从数据库选文章 → 调用 DeepSeek → 解析摘要和分类 → 更新原文章。当前存在递归调用问题，此流程尚未通过验收。
 ```
 
 - 采集器负责获取文章并补充来源信息。
@@ -117,13 +137,13 @@ Hacker News + RSS → 合并 → 清洗并按 URL 去重 → 查询数据库已�
 
 需要 Java 17、MySQL 8.0，并能访问 Maven 依赖仓库和资讯接口。先创建 `ai_daily` 数据库。新数据库可执行 `sql/schema.sql`；如果 `articles` 表已由 JPA 创建，`CREATE TABLE IF NOT EXISTS` 不会补上唯一索引，请先检查重复 URL，再按 `sql/add_url_hash_unique.sql` 中的说明执行迁移。
 
-在 IDEA 运行配置中设置 `DB_USERNAME` 和 `DB_PASSWORD`，或在当前 PowerShell 会话设置环境变量；真实密码不要写入项目文件。在项目根目录运行：
+在 IDEA 运行配置中设置 `DB_USERNAME` 和 `DB_PASSWORD`，或在当前 PowerShell 会话设置环境变量；真实密码不要写入项目文件。当前 `AiProcessingRunner` 会在启动时执行，`DeepSeekClient` 还要求 `DEEPSEEK_API_KEY`。在修复上面的递归调用和启用开关之前，暂不要启动完整应用。修复后可在项目根目录运行：
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-也可以在 IDE 中运行 `AiDailyApplication`。应用启动后执行一次采集，采集上限由 `app.collect.hn-limit` 和 `app.collect.rss-limit` 控制，默认分别为 10 和 5。清洗后保存新文章到数据库，并覆盖工作目录下的 `data/articles.json`；最终数量取决于源数据、请求结果和清洗情况。启动日志会打印最近入库的 20 篇文章。
+也可以在 IDE 中运行 `AiDailyApplication`。采集上限由 `app.collect.hn-limit` 和 `app.collect.rss-limit` 控制，默认分别为 10 和 5。清洗后保存新文章到数据库，并覆盖工作目录下的 `data/articles.json`；最终数量取决于源数据、请求结果和清洗情况。启动日志会打印最近入库的 20 篇文章。
 
 数据库去重以清洗后的 URL 为依据。`existsByUrl` 处理通常的重复采集；`uk_articles_url_hash` 唯一索引提供数据库约束。请用 `SHOW INDEX FROM articles WHERE Key_name = 'uk_articles_url_hash';` 确认实际数据库已建索引。
 

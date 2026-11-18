@@ -1,13 +1,15 @@
 package com.example.aidaily.service;
 
 import com.example.aidaily.model.Article;
-
+import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Service
 public class ArticleService {
+    private static final int MAX_TEXT_LENGTH = 12_000;
+
     public List<Article> clean(List<Article> articles) {
         Map<String, Article> articleMap = new LinkedHashMap<>();
         for (Article article : articles) {
@@ -27,13 +29,19 @@ public class ArticleService {
                 && ! article.url().isBlank();
     }
     private Article normalize(Article article) {
+        String text = article.text() == null ? null : Jsoup.parse(article.text()).text().strip();
+        if (text != null && text.isBlank()) {
+            text = null;
+        } else if (text != null && text.length() > MAX_TEXT_LENGTH) {
+            text = text.substring(0, MAX_TEXT_LENGTH);
+        }
         return new Article(
                 article.id(),
                 article.title().strip(),
                 article.url().strip(),
                 article.time(),
                 article.source(),
-                article.text()
+                text
         );
     }
 
